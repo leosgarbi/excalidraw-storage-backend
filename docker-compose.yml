@@ -7,7 +7,8 @@ services:
     # O "sed" abaixo substitui as URLs hardcoded da imagem oficial pelas suas URLs HTTPS
     entrypoint: /bin/sh
     command: >
-      -c "find /usr/share/nginx/html/assets -type f -name '*.js' -exec sed -i 's|https://oss-collab.excalidraw.com|https://ws.leosgarbi.com.br|g' {} + &&
+      -c "echo 'Injetando URLs...' &&
+          find /usr/share/nginx/html/assets -type f -name '*.js' -exec sed -i 's|https://oss-collab.excalidraw.com|https://ws.excalidraw.leosgarbi.com.br|g' {} + &&
           find /usr/share/nginx/html/assets -type f -name '*.js' -exec sed -i 's|https://json.excalidraw.com|https://api.excalidraw.leosgarbi.com.br|g' {} + &&
           nginx -g 'daemon off;'"
     environment:
