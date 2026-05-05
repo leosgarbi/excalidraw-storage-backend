@@ -17,11 +17,13 @@ services:
       HTTP_STORAGE_BACKEND_URL: "http://excalidraw-storage-backend:8080/api/v2"
 
   excalidraw-storage-backend:
-    build: .
+    image: kiliandeca/excalidraw-storage-backend
     expose:
       - "8080"
     environment:
       STORAGE_URI: ${STORAGE_URI}
+      PORT: 8080
+      LOG_LEVEL: debug
 
   excalidraw-room:
     image: excalidraw/excalidraw-room
