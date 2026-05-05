@@ -30,6 +30,7 @@ services:
       STORAGE_URI: ${STORAGE_URI}
       PORT: 8080
       LOG_LEVEL: debug
+      CORS_ORIGIN: "*"   # 🔥 importante
 
     networks:
       - proxy
@@ -61,6 +62,7 @@ services:
 networks:
   proxy:
     external: true
+    name: dokploy-network
 
   internal:
-    internal: true
+    driver: bridge   
