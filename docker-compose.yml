@@ -21,7 +21,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      STORAGE_URI: ${{ secrets.STORAGE_URI }}
+      STORAGE_URI: ${STORAGE_URI}
 
   excalidraw-room:
     image: excalidraw/excalidraw-room
