@@ -1,36 +1,66 @@
 version: "3.8"
 
 services:
-  excalidraw: 
+
+  excalidraw:
     image: kiliandeca/excalidraw
-    healthcheck:
-      disable: true
-    ports:
-      - "82:80"
+    restart: unless-stopped
     environment:
-      BACKEND_V2_GET_URL: http://excalidraw-storage-backend:8080/api/v2/scenes/
-      BACKEND_V2_POST_URL: http://excalidraw-storage-backend:8080/api/v2/scenes/
+      BACKEND_V2_GET_URL: ${BACKEND_V2_GET_URL}
+      BACKEND_V2_POST_URL: ${BACKEND_V2_POST_URL}
+      HTTP_STORAGE_BACKEND_URL: ${HTTP_STORAGE_BACKEND_URL}
+      SOCKET_SERVER_URL: ${SOCKET_SERVER_URL}
+      STORAGE_BACKEND: ${STORAGE_BACKEND}
+
       LIBRARY_URL: https://libraries.excalidraw.com
       LIBRARY_BACKEND: https://us-central1-excalidraw-room-persistence.cloudfunctions.net/libraries
-      SOCKET_SERVER_URL: http://excalidraw-room:80/
-      STORAGE_BACKEND: "http"
-      HTTP_STORAGE_BACKEND_URL: "http://excalidraw-storage-backend:8080/api/v2"
+
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.excalidraw.rule=Host(`excalidraw.leosgarbi.com.br`)"
+      - "traefik.http.services.excalidraw.loadbalancer.server.port=80"
 
   excalidraw-storage-backend:
     image: kiliandeca/excalidraw-storage-backend
-    expose:
-      - "8080"
+    restart: unless-stopped
     environment:
       STORAGE_URI: ${STORAGE_URI}
       PORT: 8080
       LOG_LEVEL: debug
 
+    networks:
+      - proxy
+      - internal
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.storage.rule=Host(`api.excalidraw.leosgarbi.com.br`)"
+      - "traefik.http.services.storage.loadbalancer.server.port=8080"
+
   excalidraw-room:
     image: excalidraw/excalidraw-room
-    expose:
-      - "80"
+    restart: unless-stopped
+
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.room.rule=Host(`ws.excalidraw.leosgarbi.com.br`)"
+      - "traefik.http.services.room.loadbalancer.server.port=80"
 
   redis:
     image: redis
-    expose:
-      - "6379"
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  proxy:
+    external: true
+
+  internal:
+    internal: true
