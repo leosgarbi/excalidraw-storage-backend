@@ -5,11 +5,14 @@ node_modules
 dist
 coverage
 test
-**/*.spec.ts
+*.log
 .env
 .env.*
 !.env.example
-docker-compose.yml
 Dockerfile
+Dockerfile.*
+docker-compose.yml
 README.md
-
+LICENSE
+.eslintrc.js
+.prettierrc

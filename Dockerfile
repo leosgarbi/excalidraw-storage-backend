@@ -1,33 +1,37 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- builder ----------
+# Build com TODAS as dependências (inclusive devDependencies) para o nest build.
 FROM node:20-alpine AS builder
-
 WORKDIR /app
 
-# Toolchain p/ deps nativas (bcryptjs é puro JS, mas mantemos por segurança).
-RUN apk add --no-cache python3 make g++
+# Toolchain nativa para módulos como sqlite3.
+RUN apk add --no-cache python3 make g++ libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
-# Schema antes do generate p/ aproveitar cache de layer.
-COPY prisma ./prisma
-RUN npx prisma generate
+COPY tsconfig*.json nest-cli.json ./
+COPY src ./src
 
-COPY . .
-RUN npm run build
-
+RUN npm run build \
+ && npm prune --omit=dev
 
 # ---------- runner ----------
 FROM node:20-alpine AS runner
-
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# OpenSSL é necessário para os engines do Prisma; tini cuida do PID 1.
-RUN apk add --no-cache openssl tini
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+RUN apk add --no-cache tini libstdc++
+
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 
 # node_modules completos (mantém prisma CLI p/ migrate deploy em runtime).
 COPY --from=builder /app/node_modules ./node_modules
@@ -37,9 +41,5 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 8080
 
-USER node
-
 ENTRYPOINT ["/sbin/tini", "--"]
-# Aplica migrations e sobe o servidor.
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main.js"]
-
+CMD ["node", "dist/main.js"]
