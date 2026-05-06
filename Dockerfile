@@ -1,44 +1,39 @@
-FROM node:20-alpine as builder
+# syntax=docker/dockerfile:1.7
 
-ARG CHINA_MIRROR=false
-
-# enable china mirror when ENABLE_CHINA_MIRROR is true
-RUN if [[ "$CHINA_MIRROR" = "true" ]] ; then \
-    echo "Enable China Alpine Mirror" && \
-    sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories; \
-    fi
-
-RUN if [[ "$CHINA_MIRROR" = "true" ]] ; then \
-    echo "Enable China NPM Mirror" && \
-    npm install -g cnpm --registry=https://registry.npmmirror.com; \
-    npm config set registry https://registry.npmmirror.com; \
-    fi
-
-RUN apk add --update python3 make g++ curl
-RUN npm install -g eslint
-RUN npm install -g @nestjs/cli
-
+# ---------- builder ----------
+# Build com TODAS as dependências (inclusive devDependencies) para o nest build.
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package.json .
-COPY package-lock.json .
-RUN npm install
+# Toolchain nativa para módulos como sqlite3.
+RUN apk add --no-cache python3 make g++ libc6-compat
 
-COPY . .
-RUN npm ci --prod
-RUN npx nest build
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
+COPY tsconfig*.json nest-cli.json ./
+COPY src ./src
 
-FROM node:20-alpine
+RUN npm run build \
+ && npm prune --omit=dev
 
+# ---------- runner ----------
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/node_modules /app/node_modules
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+RUN apk add --no-cache tini libstdc++
+
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 
 USER node
 
 EXPOSE 8080
 
-ENTRYPOINT ["npm", "run", "start:prod"]
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/main.js"]
