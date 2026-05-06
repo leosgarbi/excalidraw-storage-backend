@@ -5,8 +5,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Toolchain nativa para módulos como sqlite3.
-RUN apk add --no-cache python3 make g++ libc6-compat
+# Toolchain nativa para módulos como sqlite3 + openssl pro Prisma engine.
+RUN apk add --no-cache python3 make g++ libc6-compat openssl
 
 # `package-lock.json*` (glob) torna o lock opcional. Se estiver fora de
 # sincronia com package.json, npm ci falha → cai pra npm install (regenera
@@ -32,7 +32,7 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-RUN apk add --no-cache tini libstdc++
+RUN apk add --no-cache tini libstdc++ openssl
 
 # node_modules completos do builder (já com Prisma Client gerado e CLI presente p/ migrate deploy em runtime).
 COPY --from=builder /app/node_modules ./node_modules
