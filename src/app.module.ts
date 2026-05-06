@@ -3,6 +3,7 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { DrawingsModule } from './drawings/drawings.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { StorageModule } from './storage/storage.module';
     AuthModule,
     DrawingsModule,
     StorageModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}
