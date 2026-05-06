@@ -134,6 +134,8 @@ export class RealtimeGateway
       pointer?: { x: number; y: number; tool?: string };
       button?: 'down' | 'up';
       selectedElementIds?: Record<string, true>;
+      username?: string;
+      color?: { background: string; stroke: string };
     },
   ): void {
     const { drawingId, userId } = client.data;
