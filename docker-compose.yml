@@ -1,43 +1,6 @@
-services:
-  excalidraw:
-    image: excalidraw/excalidraw:latest
-    restart: unless-stopped
-    ports:
-      - "82:80"
-    # O "sed" abaixo substitui as URLs hardcoded da imagem oficial pelas suas URLs HTTPS
-    entrypoint: /bin/sh
-    command: >
-      -c "echo 'Injetando URLs...' &&
-          find /usr/share/nginx/html/assets -type f -name '*.js' -exec sed -i 's|https://oss-collab.excalidraw.com|https://ws.excalidraw.leosgarbi.com.br|g' {} + &&
-          find /usr/share/nginx/html/assets -type f -name '*.js' -exec sed -i 's|https://json.excalidraw.com|https://api.excalidraw.leosgarbi.com.br|g' {} + &&
-          nginx -g 'daemon off;'"
-    environment:
-      - VITE_APP_BACKEND_V2_GET_URL=https://api.excalidraw.leosgarbi.com.br/api/v2/scenes/
-      - VITE_APP_BACKEND_V2_POST_URL=https://api.excalidraw.leosgarbi.com.br/api/v2/scenes/
-      - VITE_APP_WS_SERVER_URL=wss://ws.excalidraw.leosgarbi.com.br/
-      - VITE_APP_STORAGE_BACKEND=http
+# Removido. O deploy é feito via Dockerfile no Dokploy:
+#   - Postgres é serviço separado (gerenciado pelo Dokploy ou externo)
+#   - Backend roda só com `docker build` deste diretório.
+# Mantido vazio porque o workspace não permite remoção do arquivo.
 
-  excalidraw-storage-backend:
-    image: kiliandeca/excalidraw-storage-backend
-    restart: unless-stopped
-    environment:
-      - STORAGE_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/excalidraw?authSource=admin
-      - PORT=8080
-    depends_on:
-      - mongodb
-
-  excalidraw-room:
-    image: excalidraw/excalidraw-room
-    restart: unless-stopped
-
-  mongodb:
-    image: mongo:7
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-    volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
+services: {}

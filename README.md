@@ -1,25 +1,52 @@
-# excalidraw-storage-backend
+# Excalidraw SaaS — Backend (NestJS)
 
-This is a reimplementation of [excalidraw-json](https://github.com/excalidraw/excalidraw-json) suitable for self hosting you own instance of Excalidraw.
+API NestJS com Prisma + Postgres + JWT em cookie httpOnly.
+Empacotada como uma única imagem Docker para deploy no Dokploy.
 
-It can be used with [kiliandeca/excalidraw-fork](https://gitlab.com/kiliandeca/excalidraw-fork)
+## Endpoints (prefixo global `/api`)
 
-[DockerHub kiliandeca/excalidraw-storage-backend](https://hub.docker.com/r/kiliandeca/excalidraw-storage-backend)
+- `POST /auth/register` · `POST /auth/login` · `POST /auth/logout` · `GET /auth/me`
+- `GET|POST /drawings` — lista (owned/shared) · cria
+- `GET|PUT|PATCH|DELETE /drawings/:id` — ler/atualizar conteúdo/renomear/apagar
+- `GET /drawings/:id/members` · `PATCH|DELETE /drawings/:id/members/:memberId`
+- `GET|POST /drawings/:id/invites` · `DELETE /drawings/:id/invites/:inviteId`
+- `GET /invites/:token` (público) · `POST /invites/:token/accept`
+- `POST /drawings/:id/scenes` · `GET /drawings/:id/scenes/:sceneId`
+- `GET|PUT /drawings/:id/rooms/:roomId`
+- `GET|PUT /drawings/:id/files/:fileId`
 
-Feature:
+## Variáveis de ambiente
 
-- Storing scenes: when you export as a link
-- Storing rooms: when you create a live collaboration
-- Storing images: when you export or do a live collaboration of a scene with images
+| Nome             | Obrigatório | Descrição                                                  |
+| ---------------- | :---------: | ---------------------------------------------------------- |
+| `DATABASE_URL`   | sim         | Postgres connection string.                                |
+| `JWT_SECRET`     | sim         | Segredo p/ assinar JWT (ex.: `openssl rand -hex 64`).      |
+| `PORT`           | não         | Padrão `8080`.                                             |
+| `CORS_ORIGINS`   | não         | CSV com origens permitidas (`https://app.exemplo.com`).    |
+| `COOKIE_SECURE`  | não         | `true` em produção (HTTPS).                                |
 
-It use Keyv as a simple K/V store so you can use the database of your choice.
+## Deploy (Dokploy / Docker puro)
 
-## Environement Variables
+```bash
+docker build -t excalidraw-backend .
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/excalidraw" \
+  -e JWT_SECRET="..." \
+  -e CORS_ORIGINS="https://app.exemplo.com" \
+  -e COOKIE_SECURE=true \
+  excalidraw-backend
+```
 
-| Name            | Description                                                  | Default value    |
-| --------------- | ------------------------------------------------------------ | ---------------- |
-| `PORT`          | Server listening port                                        | 8080             |
-| `GLOBAL_PREFIX` | API global prefix for every routes                           | `/api/v2`        |
-| `STORAGE_URI`   | [Keyv](https://github.com/jaredwray/keyv) connection string, example: `redis://user:pass@localhost:6379`. Availabe Keyv storage adapter: redis, mongo, postgres and mysql  | `""` (in memory **non-persistent**) |
-| `LOG_LEVEL`     | Log level (`debug`, `verbose`, `log`, `warn`, `error`)       | `warn`           |
-| `BODY_LIMIT`    | Payload size limit for scenes or images                      | `50mb`           |
+O `CMD` da imagem roda `prisma migrate deploy` antes de subir o servidor,
+aplicando migrations pendentes a cada deploy. Aponte `DATABASE_URL` para
+um Postgres gerenciado (no Dokploy basta criar um serviço Postgres e
+referenciar a URL interna) e exponha a porta `8080`.
+
+## Dev local
+
+```bash
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run start:dev   # http://localhost:8080/api
+```

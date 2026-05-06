@@ -1,3 +1,15 @@
 .git
+.github
+.gitlab-ci.yml
 node_modules
+dist
+coverage
+test
+**/*.spec.ts
+.env
+.env.*
+!.env.example
+docker-compose.yml
 Dockerfile
+README.md
+

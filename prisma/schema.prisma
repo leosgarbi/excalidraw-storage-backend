@@ -1,0 +1,121 @@
+// SaaS Excalidraw — auth, sharing, invites, permissions, binary storage.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+
+  drawings        Drawing[]       @relation("DrawingOwner")
+  memberships     DrawingMember[]
+  invitesCreated  DrawingInvite[] @relation("InviteCreator")
+  invitesAccepted DrawingInvite[] @relation("InviteAcceptor")
+}
+
+model Drawing {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User     @relation("DrawingOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members DrawingMember[]
+  invites DrawingInvite[]
+  scenes  Scene[]
+  rooms   Room[]
+  files   FileBlob[]
+
+  @@index([ownerId])
+}
+
+model DrawingMember {
+  id        String   @id @default(uuid())
+  drawingId String
+  userId    String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  drawing Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([drawingId, userId])
+  @@index([userId])
+}
+
+model DrawingInvite {
+  id           String       @id @default(uuid())
+  drawingId    String
+  email        String
+  role         Role         @default(VIEWER)
+  token        String       @unique
+  status       InviteStatus @default(PENDING)
+  expiresAt    DateTime
+  createdById  String
+  createdAt    DateTime     @default(now())
+  acceptedAt   DateTime?
+  acceptedById String?
+
+  drawing    Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  createdBy  User    @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  acceptedBy User?   @relation("InviteAcceptor", fields: [acceptedById], references: [id])
+
+  @@index([drawingId])
+  @@index([email])
+}
+
+model Scene {
+  id        String   @id
+  drawingId String
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  drawing Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  @@index([drawingId])
+}
+
+model Room {
+  id        String   @id
+  drawingId String
+  data      Bytes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  drawing Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  @@index([drawingId])
+}
+
+model FileBlob {
+  id        String   @id
+  drawingId String
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  drawing Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  @@index([drawingId])
+}

@@ -1,44 +1,45 @@
-FROM node:20-alpine as builder
+# syntax=docker/dockerfile:1.7
 
-ARG CHINA_MIRROR=false
-
-# enable china mirror when ENABLE_CHINA_MIRROR is true
-RUN if [[ "$CHINA_MIRROR" = "true" ]] ; then \
-    echo "Enable China Alpine Mirror" && \
-    sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories; \
-    fi
-
-RUN if [[ "$CHINA_MIRROR" = "true" ]] ; then \
-    echo "Enable China NPM Mirror" && \
-    npm install -g cnpm --registry=https://registry.npmmirror.com; \
-    npm config set registry https://registry.npmmirror.com; \
-    fi
-
-RUN apk add --update python3 make g++ curl
-RUN npm install -g eslint
-RUN npm install -g @nestjs/cli
+# ---------- builder ----------
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json .
-COPY package-lock.json .
-RUN npm install
+# Toolchain p/ deps nativas (bcryptjs é puro JS, mas mantemos por segurança).
+RUN apk add --no-cache python3 make g++
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Schema antes do generate p/ aproveitar cache de layer.
+COPY prisma ./prisma
+RUN npx prisma generate
 
 COPY . .
-RUN npm ci --prod
-RUN npx nest build
+RUN npm run build
 
 
-FROM node:20-alpine
+# ---------- runner ----------
+FROM node:20-alpine AS runner
 
 WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
 
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/node_modules /app/node_modules
+# OpenSSL é necessário para os engines do Prisma; tini cuida do PID 1.
+RUN apk add --no-cache openssl tini
 
-USER node
+# node_modules completos (mantém prisma CLI p/ migrate deploy em runtime).
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 8080
 
-ENTRYPOINT ["npm", "run", "start:prod"]
+USER node
+
+ENTRYPOINT ["/sbin/tini", "--"]
+# Aplica migrations e sobe o servidor.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main.js"]
+

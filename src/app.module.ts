@@ -1,17 +1,17 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { RawParserMiddleware } from './raw-parser.middleware';
-import { ScenesController } from './scenes/scenes.controller';
-import { StorageService } from './storage/storage.service';
-import { RoomsController } from './rooms/rooms.controller';
-import { FilesController } from './files/files.controller';
+import { Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
+import { CommonModule } from './common/common.module';
+import { DrawingsModule } from './drawings/drawings.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
-  imports: [],
-  controllers: [ScenesController, RoomsController, FilesController],
-  providers: [StorageService],
+  imports: [
+    PrismaModule,
+    CommonModule,
+    AuthModule,
+    DrawingsModule,
+    StorageModule,
+  ],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RawParserMiddleware).forRoutes('**');
-  }
-}
+export class AppModule {}

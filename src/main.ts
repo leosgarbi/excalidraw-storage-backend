@@ -1,23 +1,62 @@
-import { LogLevel } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
+import 'reflect-metadata';
 import { AppModule } from './app.module';
 
-function isLogLevel(value: any): value is LogLevel {
-  return value in ['log', 'error', 'warn', 'debug', 'verbose'];
+const STORAGE_BINARY_PATTERNS: { method: string; re: RegExp }[] = [
+  { method: 'POST', re: /^\/api\/drawings\/[^/]+\/scenes\/?$/ },
+  { method: 'PUT', re: /^\/api\/drawings\/[^/]+\/rooms\/[^/]+\/?$/ },
+  { method: 'PUT', re: /^\/api\/drawings\/[^/]+\/files\/[^/]+\/?$/ },
+];
+
+function isStorageBinary(req: express.Request): boolean {
+  const path = req.url.split('?')[0];
+  return STORAGE_BINARY_PATTERNS.some((p) => p.method === req.method && p.re.test(path));
 }
 
 async function bootstrap() {
-  const logLevel = isLogLevel(process.env.LOG_LEVEL)
-    ? process.env.LOG_LEVEL
-    : 'log';
-
   const app = await NestFactory.create(AppModule, {
-    cors: true,
-    logger: [logLevel],
+    bodyParser: false,
+    logger: ['log', 'error', 'warn'],
   });
 
-  app.setGlobalPrefix(process.env.GLOBAL_PREFIX ?? '/api/v2');
+  app.use(cookieParser());
 
-  await app.listen(process.env.PORT ?? 8080);
+  const rawParser = express.raw({ type: '*/*', limit: process.env.BODY_LIMIT ?? '50mb' });
+  const jsonParser = express.json({ limit: '5mb' });
+  app.use(
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (isStorageBinary(req)) return rawParser(req, res, next);
+      return jsonParser(req, res, next);
+    },
+  );
+
+  const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: origins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.setGlobalPrefix(process.env.GLOBAL_PREFIX ?? 'api');
+
+  const port = Number(process.env.PORT ?? 8080);
+  await app.listen(port);
+  // eslint-disable-next-line no-console
+  console.log(`Backend ouvindo em http://localhost:${port}`);
 }
-bootstrap();
+void bootstrap();
