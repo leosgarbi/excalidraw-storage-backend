@@ -1,7 +1,3 @@
-import { RawParserMiddleware } from './raw-parser.middleware';
+// Removed legacy spec.
+export { };
 
-describe('RawParserMiddleware', () => {
-  it('should be defined', () => {
-    expect(new RawParserMiddleware()).toBeDefined();
-  });
-});

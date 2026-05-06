@@ -20,6 +20,8 @@ RUN npm run build \
 # ---------- runner ----------
 FROM node:20-alpine AS runner
 WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
 
 ENV NODE_ENV=production
 ENV PORT=8080
@@ -31,7 +33,11 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
-USER node
+# node_modules completos (mantém prisma CLI p/ migrate deploy em runtime).
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 8080
 
