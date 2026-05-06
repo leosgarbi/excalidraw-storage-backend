@@ -1,11 +1,11 @@
 import {
-    Body,
-    Controller,
-    Get,
-    HttpCode,
-    Post,
-    Res,
-    UseGuards,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { LoginDto, RegisterDto } from './auth.dto';
@@ -16,12 +16,17 @@ import { COOKIE_NAME, JwtAuthGuard } from './jwt-auth.guard';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 function cookieOpts() {
+  // Em produção cross-subdomain (frontend em excalidraw.dominio, backend em
+  // api.excalidraw.dominio), defina COOKIE_DOMAIN=.dominio.com pra que o
+  // cookie seja visível nos dois subdomínios.
+  const domain = process.env.COOKIE_DOMAIN || undefined;
   return {
     httpOnly: true,
     secure: process.env.COOKIE_SECURE === 'true',
     sameSite: 'lax' as const,
     path: '/',
     maxAge: SEVEN_DAYS_MS,
+    ...(domain ? { domain } : {}),
   };
 }
 
