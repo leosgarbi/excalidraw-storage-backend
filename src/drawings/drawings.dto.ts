@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Allow, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export const EMPTY_CONTENT = {
   type: 'excalidraw',
@@ -19,8 +19,14 @@ export class CreateDrawingDto {
 
 export class UpdateContentDto {
   // shape valid Excalidraw content; we sanitize at service level.
+  // @Allow() libera o whitelist do ValidationPipe sem impor tipo (JSON livre).
+  @Allow()
   elements?: unknown;
+
+  @Allow()
   appState?: unknown;
+
+  @Allow()
   files?: unknown;
 }
 
