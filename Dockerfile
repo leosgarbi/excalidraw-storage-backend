@@ -17,9 +17,12 @@ RUN npm ci --no-audit --no-fund \
      && npm install --no-audit --no-fund)
 
 COPY tsconfig*.json nest-cli.json ./
+COPY prisma ./prisma
 COPY src ./src
 
-RUN npm run build \
+# Gera o Prisma Client antes do nest build (tipos Role/InviteStatus etc.).
+RUN npx prisma generate \
+ && npm run build \
  && npm prune --omit=dev
 
 # ---------- runner ----------
@@ -27,18 +30,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
-
-ENV NODE_ENV=production
-ENV PORT=8080
 ENV HOST=0.0.0.0
 
 RUN apk add --no-cache tini libstdc++
 
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-
-# node_modules completos (mantém prisma CLI p/ migrate deploy em runtime).
+# node_modules completos do builder (já com Prisma Client gerado e CLI presente p/ migrate deploy em runtime).
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma

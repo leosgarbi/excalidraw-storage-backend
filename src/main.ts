@@ -1,7 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import * as cookieParser from 'cookie-parser';
-import * as express from 'express';
+import cookieParser from 'cookie-parser';
+import express from 'express';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
 
@@ -13,7 +13,9 @@ const STORAGE_BINARY_PATTERNS: { method: string; re: RegExp }[] = [
 
 function isStorageBinary(req: express.Request): boolean {
   const path = req.url.split('?')[0];
-  return STORAGE_BINARY_PATTERNS.some((p) => p.method === req.method && p.re.test(path));
+  return STORAGE_BINARY_PATTERNS.some(
+    (p) => p.method === req.method && p.re.test(path),
+  );
 }
 
 async function bootstrap() {
@@ -24,10 +26,17 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  const rawParser = express.raw({ type: '*/*', limit: process.env.BODY_LIMIT ?? '50mb' });
+  const rawParser = express.raw({
+    type: '*/*',
+    limit: process.env.BODY_LIMIT ?? '50mb',
+  });
   const jsonParser = express.json({ limit: '5mb' });
   app.use(
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
       if (isStorageBinary(req)) return rawParser(req, res, next);
       return jsonParser(req, res, next);
     },
