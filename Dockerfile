@@ -8,8 +8,13 @@ WORKDIR /app
 # Toolchain nativa para módulos como sqlite3.
 RUN apk add --no-cache python3 make g++ libc6-compat
 
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# `package-lock.json*` (glob) torna o lock opcional. Se estiver fora de
+# sincronia com package.json, npm ci falha → cai pra npm install (regenera
+# o lock dentro do container; build não-reproduzível mas funciona).
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund \
+ || (echo ">>> npm ci falhou (lock dessincronizado). Caindo pra npm install." \
+     && npm install --no-audit --no-fund)
 
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
